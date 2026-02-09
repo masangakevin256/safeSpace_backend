@@ -1,5 +1,5 @@
 import express from "express";
-import { getAllUsers, addNewUser, updateUser, getUser, deleteUser} from "../controller/controlUsers.js";
+import { getAllUsers, addNewUser, updateUser, getUser, deleteUser } from "../controller/controlUsers.js";
 import { controlUserLogin } from "../controller/controlLogin.js";
 import { servePasswordResetForm, resetPasswordLink, resetPassword } from "../controller/controlPasswordReset.js";
 import { getAllCounselors, addNewCounselor, updateCounselor, getCounselor, deleteCounselor } from "../controller/controlCounselors.js";
@@ -8,11 +8,16 @@ import { getAllAdmins, addNewAdmin, updateAdmin, getAdmin, deleteAdmin } from ".
 import { controlAdminLogin } from "../controller/controlLogin.js";
 import { verifyJwt } from "../middlewares/verifyJwt.js";
 import { verifyRoles } from "../middlewares/verifyRoles.js";
-import {ROLE_LIST} from "../config/role_list.js";
+import { ROLE_LIST } from "../config/role_list.js";
 import { createSession, autoAssignCounselor, getSessions, deleteSession } from "../controller/controlSessions.js";
 import { getNotifications, deleteNotification } from "../controller/controlNotification.js";
 import { sendMessage, getMessages, deleteMessage } from "../controller/controlMessages.js";
 import { createCheckin, getMyCheckins, getUserCheckins } from "../controller/controlCheckins.js";
+
+import { testAIConfig, askAI } from "../controller/controlAi.js";
+import { createFeedback, getAllFeedbacks, getFeedbackById, deleteFeedback } from "../controller/controlFeedback.js";
+import { handleRefreshToken } from "../controller/controlRefreshToken.js";
+import { handleLogout } from "../controller/controlLogout.js";
 const router = express.Router();
 //unprotected routes
 
@@ -30,6 +35,8 @@ router.post("/auth/login/admin", controlAdminLogin);
 router.get("/auth/user/password-reset/serve-password-reset-form", servePasswordResetForm);
 router.post("/auth/user/password-reset/password-reset-form", resetPasswordLink);
 router.post("/auth/password-reset/reset-password", resetPassword);
+router.get("/auth/refresh", handleRefreshToken);
+router.get("/auth/logout", handleLogout);
 
 
 //protected routes
@@ -50,7 +57,7 @@ router.delete("/counselors/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselo
 router.get("/admins", verifyRoles(ROLE_LIST.admin), getAllAdmins);
 router.put("/admins/:id", verifyRoles(ROLE_LIST.admin), updateAdmin);
 router.get("/admins/:id", verifyRoles(ROLE_LIST.admin), getAdmin);
-router.delete("/admins/:id",verifyRoles(ROLE_LIST.admin), deleteAdmin);
+router.delete("/admins/:id", verifyRoles(ROLE_LIST.admin), deleteAdmin);
 
 //session routes
 router.post("/sessions", verifyRoles(ROLE_LIST.user), createSession);
@@ -73,5 +80,14 @@ router.post("/checkins", verifyRoles(ROLE_LIST.user), createCheckin);
 router.get("/checkins", verifyRoles(ROLE_LIST.user), getMyCheckins);
 router.get("/checkins/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), getUserCheckins);
 
+//ai routes
+router.get("/ai/test", testAIConfig);
+router.post("/ai/chat", verifyRoles(ROLE_LIST.user, ROLE_LIST.counselor), askAI);
+
+//feedback routes
+router.post("/feedback", verifyRoles(ROLE_LIST.user), createFeedback);
+router.get("/feedback", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), getAllFeedbacks);
+router.get("/feedback/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), getFeedbackById);
+router.delete("/feedback/:id", verifyRoles(ROLE_LIST.admin), deleteFeedback);
 
 export default router;

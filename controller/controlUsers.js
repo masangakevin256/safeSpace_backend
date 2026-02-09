@@ -3,8 +3,6 @@ import bcrypt from "bcrypt";
 //no email  for privacy
 export const getAllUsers = async (req, res) => {
   try {
-    const user = req.user;
-    console.log(user ||  "No user");
     // Only select safe fields
     const result = await pool.query(
       "SELECT user_id, username, age_group, last_seen, pulse_level FROM users"

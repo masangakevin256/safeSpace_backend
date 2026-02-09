@@ -1,11 +1,12 @@
 import express from "express";
 import { logger } from "./middlewares/logger.js";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import corsOptions from "./controller/controlCorsOption.js";
 import path from "path";
 import router from "./routes/routes.js";
 import { fileURLToPath } from "url";
-import {errorLog} from "./middlewares/errorLogger.js";
+import { errorLog } from "./middlewares/errorLogger.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -17,6 +18,7 @@ const app = express();
 //custom middleware
 app.use(logger);
 app.use(cors(corsOptions));
+app.use(cookieParser());
 
 
 //use built in middleware

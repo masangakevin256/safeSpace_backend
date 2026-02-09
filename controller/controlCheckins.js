@@ -1,6 +1,6 @@
-//check_ins controller
 import { pool } from "../config/connect_database.js";
 import { createSafetyFlag } from "./controlSafetyFlags.js";
+import { analyzeRisk } from "./controlAi.js";
 
 // Helper function to get recent moods
 async function getRecentMoods(user_id, days = 7) {
@@ -47,7 +47,7 @@ export async function createCheckin(req, res) {
 
     await pool.query(`UPDATE users SET pulse_level = $1 WHERE user_id = $2`, [newPulse, user_id]);
 
-    // Auto-trigger safety flags
+    // Auto-trigger safety flags (Rule-based)
     if (mood <= 1 || lowMoodCount >= 2) {
       await createSafetyFlag({
         user_id,
@@ -56,6 +56,35 @@ export async function createCheckin(req, res) {
         mood,
         note,
       });
+    }
+
+    // AI Risk Analysis
+    if (note && note.length > 5) {
+      // Analyze asynchronously to not block response? 
+      // Ideally we want to know immediately. Let's await for now but catch errors inside analyzeRisk so it doesn't crash.
+      const riskAnalysis = await analyzeRisk(note);
+
+      if (riskAnalysis) {
+        console.log("AI Risk Analysis Result:", riskAnalysis);
+
+        // If AI detects high risk, override pulse and trigger flag
+        if (riskAnalysis.score >= 7 || riskAnalysis.category === "High" || riskAnalysis.category === "Critical") {
+
+          // Force pulse to 1 (Critical) if not already low
+          if (newPulse > 1) {
+            await pool.query(`UPDATE users SET pulse_level = 1 WHERE user_id = $1`, [user_id]);
+            newPulse = 1;
+          }
+
+          await createSafetyFlag({
+            user_id,
+            type: "ai_risk_detection",
+            source: "ai_analysis",
+            mood,
+            note: `[AI Analysis]: ${JSON.stringify(riskAnalysis)} \nOriginal Note: ${note}`,
+          });
+        }
+      }
     }
 
     return res.status(201).json({
