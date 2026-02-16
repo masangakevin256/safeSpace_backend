@@ -33,7 +33,7 @@ export const askAI = async (req, res) => {
 
     // System personality / rules
     const systemPrompt = `
-You are an AI support assistant for a digital mental health platform called SafeSpace+.
+You are an AI support assistant for a digital mental health platform called Jali Connect.
 
 Your role:
 - Provide calm, supportive, non-judgmental responses

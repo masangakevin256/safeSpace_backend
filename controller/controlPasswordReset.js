@@ -38,7 +38,7 @@ export const resetPasswordLink = async (req, res) => {
                 <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Reset Password - SafeSpace+</title>
+                <title>Reset Password - Jali Connect</title>
                 <style>
                     * {
                     margin: 0;
@@ -119,7 +119,7 @@ export const resetPasswordLink = async (req, res) => {
                 <body>
                 <div class="container">
                     <section>
-                    <h1>SafeSpace+</h1>
+                    <h1>Jali Connect</h1>
                     <h3>Reset Your Password</h3>
                     <p>
                         You requested to reset your password. Click the button below to proceed. 
@@ -128,7 +128,7 @@ export const resetPasswordLink = async (req, res) => {
                     <a href="${resetLink}" class="button">Reset Password</a>
                     </section>
                     <footer>
-                    <p>&copy; 2026 SafeSpace+. All rights reserved.</p>
+                    <p>&copy; 2026 Jali Connect. All rights reserved.</p>
                     </footer>
                 </div>
                 </body>
@@ -243,7 +243,7 @@ export const servePasswordResetForm = async (req, res) => {
     </head>
      <body>
        <div class="container">
-         <h1>SafeSpace+</h1>
+         <h1>Jali Connect</h1>
          <div class="rules">
            <p>Password must be at least 8 characters long</p>
            <p>Password must contain at least one special character</p>

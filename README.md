@@ -1,6 +1,6 @@
-# SafeSpace+ Backend
+# Jali Connect Backend
 
-SafeSpace+ is a digital sanctuary designed to bridge the gap between mental health support and technology. This backend serves as the engine for the platform, enabling secure communication, AI-assisted safety monitoring, and seamless management of counseling sessions.
+Jali Connect is a digital sanctuary designed to bridge the gap between mental health support and technology. This backend serves as the engine for the platform, enabling secure communication, AI-assisted safety monitoring, and seamless management of counseling sessions.
 
 ## Core Features
 
@@ -72,4 +72,4 @@ To keep things organized, we follow a modular pattern:
     - **Production**: `npm start`
 
 ---
-*SafeSpace+ Backend — Empowering support through technology.*
+*Jali Connect Backend — Empowering support through technology.*

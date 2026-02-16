@@ -2,7 +2,7 @@ import { pool } from "../config/connect_database.js";
 import jwt from "jsonwebtoken";
 
 export const handleLogout = async (req, res) => {
-    // On client, also delete the accessToken
+    // On client,  delete the accessToken
     const cookies = req.cookies;
     if (!cookies?.jwt) return res.sendStatus(204); // No content
 
