@@ -44,7 +44,13 @@ export const addNewUser = async(req,res) => {
             return res.status(400).json({ message: "Try another username" });
         }
         
-
+        const existingEmail = await pool.query(
+            "SELECT * FROM users WHERE email = $1",
+            [email]
+        );
+        if(existingEmail.rows.length > 0){
+            return res.status(400).json({ message: "Try another email" });
+        }
         await pool.query(
             "INSERT INTO users (username, email, password_hash, age_group, phone) VALUES ($1, $2, $3, $4, $5) RETURNING *",
             [username, email, hashedPassword, age_group, phone]

@@ -35,6 +35,7 @@ export const addNewAdmin = async (req, res) => {
     const existingAdmins = await pool.query(
         "SELECT * FROM admins"
     );
+    
     if(existingAdmins.rows.length >= 5){
         return res.status(400).json({ message: "Maximum number of admins reached" });
     }
