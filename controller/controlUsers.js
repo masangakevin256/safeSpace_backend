@@ -23,11 +23,12 @@ export const addNewUser = async(req,res) => {
         username,
         email,
         password,
-        age_group
+        age_group,
+        phone
 
     } = req.body;
 
-    if(!username || !password || !age_group){
+    if(!username || !password){
         return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -45,8 +46,8 @@ export const addNewUser = async(req,res) => {
         
 
         await pool.query(
-            "INSERT INTO users (username, email, password_hash, age_group) VALUES ($1, $2, $3, $4) RETURNING *",
-            [username, email, hashedPassword, age_group]
+            "INSERT INTO users (username, email, password_hash, age_group, phone) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+            [username, email, hashedPassword, age_group, phone]
         );
         
         res.json({message: `${username} added successfully.You can now login`});
