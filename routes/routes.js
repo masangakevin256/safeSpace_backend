@@ -9,7 +9,7 @@ import { controlAdminLogin } from "../controller/controlLogin.js";
 import { verifyJwt } from "../middlewares/verifyJwt.js";
 import { verifyRoles } from "../middlewares/verifyRoles.js";
 import { ROLE_LIST } from "../config/role_list.js";
-import { createSession, autoAssignCounselor, getSessions, deleteSession } from "../controller/controlSessions.js";
+import { createSession, getSessions, deleteSession, autoAssignCounselorController } from "../controller/controlSessions.js";
 import { getNotifications, deleteNotification } from "../controller/controlNotification.js";
 import { sendMessage, getMessages, deleteMessage } from "../controller/controlMessages.js";
 import { createCheckin, getMyCheckins, getUserCheckins } from "../controller/controlCheckins.js";
@@ -61,7 +61,7 @@ router.delete("/admins/:id", verifyRoles(ROLE_LIST.admin), deleteAdmin);
 
 //session routes
 router.post("/sessions", verifyRoles(ROLE_LIST.user), createSession);
-router.post("/sessions/auto-assign/:session_id", verifyRoles(ROLE_LIST.counselor), autoAssignCounselor);
+router.post("/sessions/auto-assign/:session_id", verifyRoles(ROLE_LIST.admin), autoAssignCounselorController);
 router.get("/sessions", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor, ROLE_LIST.user), getSessions);
 router.delete("/sessions/:session_id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor, ROLE_LIST.user), deleteSession);
 

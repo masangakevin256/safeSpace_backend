@@ -57,32 +57,31 @@ export const createSession = async (req, res) => {
     }
 
 }
-
-export const autoAssignCounselor = async (req, res) => {
-    const { session_id } = req.params;
+export const autoAssignCounselor = async (session_id) => {
     try {
-        // Get session pulse
+        // 1. Get session waiting for assignment
         const sessionResult = await pool.query(
-            "SELECT initial_pulse, user_id FROM sessions WHERE session_id = $1 AND status = 'waiting'",
+            `SELECT initial_pulse, user_id 
+             FROM sessions 
+             WHERE session_id = $1 
+             AND status = 'waiting'`,
             [session_id]
         );
 
         if (sessionResult.rows.length === 0) {
-            return res.status(400).json({
-                message: "Session not found or not in waiting state"
-            })
+            throw new Error("Session not found or not in waiting state");
         }
 
         const { initial_pulse, user_id } = sessionResult.rows[0];
 
-        // Find best counselor (least load)
+        // 2. Find least-loaded counselor
         const counselorResult = await pool.query(
             `
-            SELECT c.counselor_id, COUNT(s.session_id) as active_count
+            SELECT c.counselor_id, COUNT(s.session_id) AS active_count
             FROM counselors c
             LEFT JOIN sessions s 
-              ON c.counselor_id = s.counselor_id 
-              AND s.status = 'active'
+                ON c.counselor_id = s.counselor_id 
+                AND s.status = 'active'
             WHERE c.is_active = true
             GROUP BY c.counselor_id
             ORDER BY active_count ASC
@@ -91,26 +90,27 @@ export const autoAssignCounselor = async (req, res) => {
         );
 
         if (counselorResult.rows.length === 0) {
-            return res.status(404).json({
-                message: "No available counselors"
-            })
+            throw new Error("No available counselors");
         }
 
         const counselor_id = counselorResult.rows[0].counselor_id;
 
-        // Assign counselor
-        await pool.query(
+        // 3. Assign counselor
+        const updateResult = await pool.query(
             `
             UPDATE sessions
             SET counselor_id = $1,
                 status = 'active',
                 started_at = NOW()
             WHERE session_id = $2
+            RETURNING *;
             `,
             [counselor_id, session_id]
         );
 
-        // Notifications
+        const updatedSession = updateResult.rows[0];
+
+        // 4. Notifications
         await addNotification(
             user_id,
             "user",
@@ -131,18 +131,33 @@ export const autoAssignCounselor = async (req, res) => {
             "A counselor has joined your session"
         );
 
-        return res.status(200).json({
-            message: "Session assigned successfully",
-            session: sessionResult.rows[0]
-        })
+        // return result instead of res.json
+        return updatedSession;
 
     } catch (error) {
         console.error("autoAssignCounselor error:", error);
-        return res.status(500).json({
-            message: error?.message || "Internal server error"
-        })
+        throw error;
     }
 };
+export const autoAssignCounselorController = async (req, res) => {
+    try {
+        const { session_id } = req.params;
+
+        const session = await autoAssignCounselor(session_id);
+
+        return res.status(200).json({
+            message: "Session assigned successfully",
+            session
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: error?.message || "Internal server error"
+        });
+    }
+};
+
+
 
 //end session
 export const endSession= async (req,res) => {
