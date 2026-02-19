@@ -173,7 +173,7 @@ export const getUser = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
     const result = await pool.query(
-      "SELECT user_id, username, age_group FROM users WHERE user_id = $1",
+      "SELECT user_id, username, age_group, phone, email FROM users WHERE user_id = $1",
       [id]
     );
 

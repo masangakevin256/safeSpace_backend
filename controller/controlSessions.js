@@ -58,6 +58,7 @@ export const createSession = async (req, res) => {
 
 }
 export const autoAssignCounselor = async (session_id) => {
+    // console.log(session_id);
     try {
         // 1. Get session waiting for assignment
         const sessionResult = await pool.query(
