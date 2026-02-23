@@ -3,6 +3,7 @@ const allowedOrigins = [
     "http://localhost:3000",
     "http://localhost:3001",
     "http://localhost:8080",
+    "http://localhost:5173",
     "https://jali-connect-hub.lovable.app",
     "https://jaliconnect.vercel.app"
 ];

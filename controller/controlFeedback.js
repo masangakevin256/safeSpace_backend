@@ -33,14 +33,14 @@ export const createFeedback = async (req, res) => {
 // Get all feedbacks
 export const getAllFeedbacks = async (req, res) => {
     const { roles, user_id, counselor_id, admin_id } = req.user;
-    
+
     try {
         let feedbacks;
         if (roles === "counselor") {
             const idValue = counselor_id;
             feedbacks = await pool.query(
                 `
-                SELECT f.* FROM feedback f
+                SELECT f.feedback_id AS id, f.* FROM feedback f
                 JOIN sessions s ON f.session_id = s.session_id
                 WHERE s.counselor_id = $1
                 ORDER BY f.created_at DESC
@@ -48,13 +48,13 @@ export const getAllFeedbacks = async (req, res) => {
                 [idValue]
             );
         } else if (roles === "admin") {
-            feedbacks = await pool.query("SELECT * FROM feedback ORDER BY created_at DESC");
+            feedbacks = await pool.query("SELECT feedback_id AS id, * FROM feedback ORDER BY created_at DESC");
         } else {
             // "user" role - feedback linked via sessions table
             const idValue = user_id;
             feedbacks = await pool.query(
                 `
-                SELECT f.* FROM feedback f
+                SELECT f.feedback_id AS id, f.* FROM feedback f
                 JOIN sessions s ON f.session_id = s.session_id
                 WHERE s.user_id = $1
                 ORDER BY f.created_at DESC
@@ -73,32 +73,32 @@ export const getAllFeedbacks = async (req, res) => {
 export const getFeedbackById = async (req, res) => {
     const { id } = req.params;
     const { roles, user_id, counselor_id, admin_id } = req.user;
-    
+
     try {
         let feedback;
         if (roles === "counselor") {
             feedback = await pool.query(
                 `
-                SELECT f.* FROM feedback f
+                SELECT f.feedback_id AS id, f.* FROM feedback f
                 JOIN sessions s ON f.session_id = s.session_id
                 WHERE f.feedback_id = $1 AND s.counselor_id = $2
                 `,
                 [id, counselor_id]
             );
         } else if (roles === "admin") {
-            feedback = await pool.query("SELECT * FROM feedback WHERE feedback_id = $1", [id]);
+            feedback = await pool.query("SELECT feedback_id AS id, * FROM feedback WHERE feedback_id = $1", [id]);
         } else {
             // "user" role
             feedback = await pool.query(
                 `
-                SELECT f.* FROM feedback f
+                SELECT f.feedback_id AS id, f.* FROM feedback f
                 JOIN sessions s ON f.session_id = s.session_id
                 WHERE f.feedback_id = $1 AND s.user_id = $2
                 `,
                 [id, user_id]
             );
         }
-        
+
         if (feedback.rows.length === 0) {
             return res.status(404).json({ message: "Feedback not found" });
         }
@@ -113,7 +113,7 @@ export const getFeedbackById = async (req, res) => {
 export const deleteFeedback = async (req, res) => {
     const { id } = req.params;
     const { roles, user_id, counselor_id, admin_id } = req.user;
-    
+
     try {
         let result;
         if (roles === "admin") {

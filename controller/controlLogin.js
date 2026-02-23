@@ -58,18 +58,25 @@ export const controlUserLogin = async (req, res) => {
         });
         //update last_seen
         await pool.query(
-        "UPDATE users SET last_seen = NOW() WHERE user_id = $1",
-        [user.rows[0].user_id]
+            "UPDATE users SET last_seen = NOW() WHERE user_id = $1",
+            [user.rows[0].user_id]
         );
 
 
-        res.json({ accessToken });
-        
-    }catch(error){
+        res.json({
+            accessToken,
+            user: {
+                id: user.rows[0].user_id,
+                username: user.rows[0].username,
+                role: user.rows[0].role
+            }
+        });
+
+    } catch (error) {
         console.log(error);
         res.status(500).json({ message: error?.message });
     }
-    
+
 }
 
 export const controlCounselorLogin = async (req, res) => {
@@ -121,7 +128,7 @@ export const controlCounselorLogin = async (req, res) => {
             "UPDATE counselors SET refresh_token = $1 WHERE counselor_id = $2",
             [refreshToken, counselor.rows[0].counselor_id]
         )
-        console.log(refreshToken);
+        // console.log(refreshToken);
         //set refresh token as httpOnly cookie
         res.cookie("jwt", refreshToken, {
             httpOnly: true,
@@ -131,18 +138,25 @@ export const controlCounselorLogin = async (req, res) => {
         });
         //update is_active to true
         await pool.query(
-        "UPDATE counselors SET is_active = true WHERE counselor_id = $1",
-        [counselor.rows[0].counselor_id]
+            "UPDATE counselors SET is_active = true WHERE counselor_id = $1",
+            [counselor.rows[0].counselor_id]
         );
 
 
-        res.json({ accessToken });
-        
-    }catch(error){
+        res.json({
+            accessToken,
+            user: {
+                id: counselor.rows[0].counselor_id,
+                username: counselor.rows[0].username,
+                role: counselor.rows[0].role
+            }
+        });
+
+    } catch (error) {
         console.error(error);
         res.status(500).json({ message: error?.message });
     }
-    
+
 }
 export const controlAdminLogin = async (req, res) => {
     const { username, password } = req.body;
@@ -202,17 +216,23 @@ export const controlAdminLogin = async (req, res) => {
         });
         //update last_login
         await pool.query(
-        "UPDATE admins SET last_login = NOW() WHERE admin_id = $1",
-        [admin.rows[0].admin_id]
+            "UPDATE admins SET last_login = NOW() WHERE admin_id = $1",
+            [admin.rows[0].admin_id]
         );
 
 
-        res.json({ accessToken });
-        
-    }catch(error){
+        res.json({
+            accessToken,
+            user: {
+                id: admin.rows[0].admin_id,
+                username: admin.rows[0].username,
+                role: admin.rows[0].role
+            }
+        });
+
+    } catch (error) {
         console.error(error);
         res.status(500).json({ message: error?.message });
     }
-    
+
 }
-    

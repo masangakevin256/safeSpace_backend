@@ -33,7 +33,7 @@ export async function createCheckin(req, res) {
     const insertQuery = `
       INSERT INTO checkins (user_id, mood, note)
       VALUES ($1, $2, $3)
-      RETURNING checkin_id, created_at
+      RETURNING checkin_id AS id, created_at
     `;
     const insertRes = await pool.query(insertQuery, [user_id, mood, note || ""]);
 
@@ -87,11 +87,7 @@ export async function createCheckin(req, res) {
       }
     }
 
-    return res.status(201).json({
-      message: "Check-in created successfully",
-      checkin: insertRes.rows[0],
-      pulse: newPulse,
-    });
+    return res.status(201).json(insertRes.rows[0]);
   } catch (err) {
     console.error("Error creating check-in:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -104,11 +100,11 @@ export async function getMyCheckins(req, res) {
     const user_id = req.user.user_id;
 
     const checkinsRes = await pool.query(
-      `SELECT checkin_id, mood, note, created_at FROM checkins WHERE user_id = $1 ORDER BY created_at DESC`,
+      `SELECT checkin_id AS id, mood, note, created_at FROM checkins WHERE user_id = $1 ORDER BY created_at DESC`,
       [user_id]
     );
 
-    return res.status(200).json({ checkins: checkinsRes.rows });
+    return res.status(200).json(checkinsRes.rows);
   } catch (err) {
     console.error("Error fetching check-ins:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -120,11 +116,11 @@ export async function getUserCheckins(req, res) {
   try {
     const { id } = req.params; // user id
     const checkinsRes = await pool.query(
-      `SELECT checkin_id, mood, note, created_at FROM checkins WHERE user_id = $1 ORDER BY created_at DESC`,
+      `SELECT checkin_id AS id, mood, note, created_at FROM checkins WHERE user_id = $1 ORDER BY created_at DESC`,
       [id]
     );
 
-    return res.status(200).json({ checkins: checkinsRes.rows });
+    return res.status(200).json(checkinsRes.rows);
   } catch (err) {
     console.error("Error fetching user check-ins:", err);
     return res.status(500).json({ error: "Internal server error" });

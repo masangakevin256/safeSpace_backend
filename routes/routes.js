@@ -44,7 +44,7 @@ router.use(verifyJwt);
 //control user routes
 router.get("/users", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), getAllUsers);
 router.put("/users/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor, ROLE_LIST.user), updateUser);
-router.get("/users/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor, ROLE_LIST.user), getUser);
+router.get("/users/:id", verifyRoles( ROLE_LIST.user), getUser);
 router.delete("/users/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.user), deleteUser);
 
 //counselor routes

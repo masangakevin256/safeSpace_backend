@@ -32,7 +32,7 @@ export const sendMessage = async (req, res) => {
         // Permission check
         if (
             (user.roles === "user" && session.user_id !== user.user_id) ||
-            (user.roles === "counselor" && session.counselor_id !== user.user_id)
+            (user.roles === "counselor" && session.counselor_id !== user.counselor_id)
         ) {
             return res.status(403).json({ message: "Access denied" });
         }
@@ -45,7 +45,7 @@ export const sendMessage = async (req, res) => {
             `
             INSERT INTO messages (session_id, sender, content, created_at)
             VALUES ($1, $2, $3, NOW())
-            RETURNING *;
+            RETURNING message_id AS id, *;
             `,
             [session_id, sender, content]
         );
@@ -76,10 +76,7 @@ export const sendMessage = async (req, res) => {
             console.error("Socket emission failed:", socketError);
         }
 
-        return res.status(201).json({
-            message: "Message sent",
-            data: message
-        });
+        return res.status(201).json(message);
 
     } catch (error) {
         console.error("sendMessage error:", error);
@@ -109,23 +106,20 @@ export const getMessages = async (req, res) => {
 
         if (
             (user.roles === "user" && session.user_id !== user.user_id) ||
-            (user.roles === "counselor" && session.counselor_id !== user.user_id)
+            (user.roles === "counselor" && session.counselor_id !== user.counselor_id)
         ) {
             return res.status(403).json({ message: "Access denied" });
         }
 
         const messagesResult = await pool.query(
-            "SELECT * FROM messages WHERE session_id = $1 ORDER BY created_at ASC",
+            "SELECT message_id AS id, * FROM messages WHERE session_id = $1 ORDER BY created_at ASC",
             [session_id]
         );
 
         const messages = messagesResult.rows;
 
-        return res.status(200).json({
-            message: "Messages retrieved",
-            data: messages
-        });
-        
+        return res.status(200).json(messages);
+
     } catch (error) {
         console.error("getMessages error:", error);
         res.status(500).json({ message: "Failed to get messages" });

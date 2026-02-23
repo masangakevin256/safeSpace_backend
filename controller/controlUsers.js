@@ -167,11 +167,6 @@ export const getUser = async (req, res) => {
     if(existingUser.rows.length === 0){
       return res.status(404).json({ message: "User not found" });
     }
-    //check if the user is the one getting or an admin
-    if(user.roles === 'user' && user.user_id !== id){
-      //users can only get their own profiles
-      return res.status(403).json({ message: "Access denied" });
-    }
     const result = await pool.query(
       "SELECT user_id, username, age_group, phone, email FROM users WHERE user_id = $1",
       [id]

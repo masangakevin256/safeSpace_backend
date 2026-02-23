@@ -15,7 +15,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 
-//custom middleware
 app.use(logger);
 app.use(cors(corsOptions));
 app.use(cookieParser());

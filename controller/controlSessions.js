@@ -6,7 +6,7 @@ export const createSession = async (req, res) => {
     const user = req.user;
     const user_id = user.user_id;
 
-    try{
+    try {
         //check for user in db to pull out pulse_level
         const userPulse = await pool.query(
             `
@@ -21,23 +21,33 @@ export const createSession = async (req, res) => {
             [user_id]
         )
 
-        if(activeSession.rows.length > 0){
+        if (activeSession.rows.length > 0) {
             return res.status(400).json({
                 message: "You already have an active session"
             })
         }
-        
+        //check if their is a session in waiting state
+        const waitingSession = await pool.query(
+            `
+            SELECT * FROM sessions WHERE user_id = $1 AND status = 'waiting'
+            `,
+            [user_id]
+        )
+
+        if (waitingSession.rows.length > 0) {
+            return res.status(400).json({
+                message: "You already have a session in waiting state"
+            })
+        }
+
         const session = await pool.query(
             `
-            INSERT INTO sessions (user_id, status,initial_pulse, created_at) VALUES ($1, 'waiting', $2, NOW()) RETURNING *;
+            INSERT INTO sessions (user_id, status,initial_pulse, created_at) VALUES ($1, 'waiting', $2, NOW()) RETURNING session_id AS id, *;
             `,
             [user_id, userPulse.rows[0].pulse_level]
         )
 
-        res.status(201).json({
-            message: "Session created successfully",
-            session: session.rows[0]
-        })
+        res.status(201).json(session.rows[0]);
         //push notification
         await addNotification(
             user_id,
@@ -49,7 +59,7 @@ export const createSession = async (req, res) => {
             "You have created a new session"
         )
 
-    }catch(error){
+    } catch (error) {
         console.log(error);
         return res.status(500).json({
             message: error?.message || "Internal server error"
@@ -104,7 +114,7 @@ export const autoAssignCounselor = async (session_id) => {
                 status = 'active',
                 started_at = NOW()
             WHERE session_id = $2
-            RETURNING *;
+            RETURNING session_id AS id, *;
             `,
             [counselor_id, session_id]
         );
@@ -161,10 +171,10 @@ export const autoAssignCounselorController = async (req, res) => {
 
 
 //end session
-export const endSession= async (req,res) => {
-    const {session_id} = req.params;
+export const endSession = async (req, res) => {
+    const { session_id } = req.params;
 
-    try{
+    try {
         const sessionResult = await pool.query(
             `
             SELECT * FROM sessions WHERE session_id = $1 AND status = 'active'
@@ -172,7 +182,7 @@ export const endSession= async (req,res) => {
             [session_id]
         )
 
-        if(sessionResult.rows.length === 0){
+        if (sessionResult.rows.length === 0) {
             return res.status(404).json({
                 message: "Session not found"
             })
@@ -193,7 +203,7 @@ export const endSession= async (req,res) => {
             message: "Session ended successfully",
             session: session
         })
-    }catch(error){
+    } catch (error) {
         console.error("endSession error:", error);
         return res.status(500).json({
             message: error?.message || "Internal server error"
@@ -207,37 +217,34 @@ export const endSession= async (req,res) => {
 //counselors can get all sessions assigned to them 
 //users can get all sessions assigned to them
 
-export const getSessions = async (req,res) => {
+export const getSessions = async (req, res) => {
     const user = req.user;
     const user_id = user.user_id;
-    try{
+    try {
         let sessions;
-        if(user.roles === "admin"){
+        if (user.roles === "admin") {
             sessions = await pool.query(
                 `
-                SELECT * FROM sessions
+                SELECT session_id AS id, * FROM sessions
                 `
             )
-        }else if(user.roles === "counselor"){
+        } else if (user.roles === "counselor") {
             sessions = await pool.query(
                 `
-                SELECT * FROM sessions WHERE counselor_id = $1
+                SELECT session_id AS id, * FROM sessions WHERE counselor_id = $1
                 `,
                 [user_id]
             )
-        }else if(user.roles === "user"){
+        } else if (user.roles === "user") {
             sessions = await pool.query(
                 `
-                SELECT * FROM sessions WHERE user_id = $1
+                SELECT session_id AS id, * FROM sessions WHERE user_id = $1
                 `,
                 [user_id]
             )
         }
-        res.status(200).json({
-            message: "Sessions retrieved successfully",
-            sessions: sessions.rows
-        })
-    }catch(error){
+        res.status(200).json(sessions.rows);
+    } catch (error) {
         console.error("getSessions error:", error);
         return res.status(500).json({
             message: error?.message || "Internal server error"
@@ -250,32 +257,32 @@ export const getSessions = async (req,res) => {
 //counselors can delete their own sessions
 //users can delete their own sessions
 
-export const deleteSession = async (req,res) => {
-    const {session_id} = req.params;
+export const deleteSession = async (req, res) => {
+    const { session_id } = req.params;
     const user = req.user;
     const user_id = user.user_id;
-    try{
+    try {
         const sessionResult = await pool.query(
             `
             SELECT * FROM sessions WHERE session_id = $1
             `
             [session_id]
         )
-        if(sessionResult.rows.length === 0){
+        if (sessionResult.rows.length === 0) {
             return res.status(404).json({
                 message: "Session not found"
             })
         }
         const session = sessionResult.rows[0];
-        if(user.roles === "admin"){
+        if (user.roles === "admin") {
             await pool.query(
                 `
                 DELETE FROM sessions WHERE session_id = $1
                 `
                 [session_id]
             )
-        }else if(user.roles === "counselor"){
-            if(session.counselor_id !== user_id){
+        } else if (user.roles === "counselor") {
+            if (session.counselor_id !== user_id) {
                 return res.status(403).json({
                     message: "You are not authorized to delete this session"
                 })
@@ -286,8 +293,8 @@ export const deleteSession = async (req,res) => {
                 `
                 [session_id]
             )
-        }else if(user.roles === "user"){
-            if(session.user_id !== user_id){
+        } else if (user.roles === "user") {
+            if (session.user_id !== user_id) {
                 return res.status(403).json({
                     message: "You are not authorized to delete this session"
                 })
@@ -304,7 +311,7 @@ export const deleteSession = async (req,res) => {
             session: session
         })
     }
-    catch(error){
+    catch (error) {
         console.error("deleteSession error:", error);
         return res.status(500).json({
             message: error?.message || "Internal server error"
