@@ -30,7 +30,7 @@ export const controlUserLogin = async (req, res) => {
                 }
             },
             process.env.ACCESS_TOKEN_SECRET,
-            { expiresIn: "15m" }
+            { expiresIn: "1d" }
         )
         //generate refresh token
         const refreshToken = jwt.sign(
@@ -109,7 +109,7 @@ export const controlCounselorLogin = async (req, res) => {
                 }
             },
             process.env.ACCESS_TOKEN_SECRET,
-            { expiresIn: "15m" }
+            { expiresIn: "1d" }
         )
         //generate refresh token
         const refreshToken = jwt.sign(
@@ -188,7 +188,7 @@ export const controlAdminLogin = async (req, res) => {
                 }
             },
             process.env.ACCESS_TOKEN_SECRET,
-            { expiresIn: "15m" }
+            { expiresIn: "1d" }
         )
         //generate refresh token
         const refreshToken = jwt.sign(
