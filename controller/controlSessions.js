@@ -170,47 +170,137 @@ export const autoAssignCounselorController = async (req, res) => {
 
 
 
-//end session
-export const endSession = async (req, res) => {
+export const activateSession = async (req, res) => {
     const { session_id } = req.params;
+    const user = req.user;
 
     try {
         const sessionResult = await pool.query(
             `
-            SELECT * FROM sessions WHERE session_id = $1 AND status = 'active'
-            `
+            SELECT * FROM sessions WHERE session_id = $1
+            `,
             [session_id]
-        )
+        );
 
         if (sessionResult.rows.length === 0) {
             return res.status(404).json({
                 message: "Session not found"
-            })
+            });
         }
 
         const session = sessionResult.rows[0];
 
-        await pool.query(
+        // Ensure session is assigned to this counselor OR user is an admin
+        if (session.counselor_id !== user.user_id && user.roles !== 'admin') {
+            return res.status(403).json({
+                message: "You are not authorized to activate this session"
+            });
+        }
+
+        // Only allow activating from waiting/pending states
+        if (session.status === 'active') {
+            return res.status(400).json({
+                message: "Session is already active"
+            });
+        }
+
+        const updateResult = await pool.query(
+            `
+            UPDATE sessions
+            SET status = 'active',
+                started_at = NOW()
+            WHERE session_id = $1
+            RETURNING session_id AS id, *;
+            `,
+            [session_id]
+        );
+
+        const updatedSession = updateResult.rows[0];
+
+        // Notify the user that their session was activated
+        await addNotification(
+            updatedSession.user_id,
+            "user",
+            user.user_id,
+            "counselor",
+            "session_activated",
+            "Session Activated",
+            "Your counselor has joined the session"
+        );
+
+        res.status(200).json({
+            message: "Session activated successfully",
+            session: updatedSession
+        });
+    } catch (error) {
+        console.error("activateSession error:", error);
+        return res.status(500).json({
+            message: error?.message || "Internal server error"
+        });
+    }
+};
+
+//end session
+export const endSession = async (req, res) => {
+    const { session_id } = req.params;
+    const user = req.user;
+
+    try {
+
+        let selectQuery;
+        let selectValues;
+
+        // counselor can only end their own sessions
+        if (user.roles === "counselor") {
+            selectQuery = `
+                SELECT * FROM sessions
+                WHERE session_id = $1
+                AND counselor_id = $2
+                AND status = 'active'
+            `;
+            selectValues = [session_id, user.counselor_id];
+
+        } else {
+            // admin can end any session
+            selectQuery = `
+                SELECT * FROM sessions
+                WHERE session_id = $1
+                AND status = 'active'
+            `;
+            selectValues = [session_id];
+        }
+
+        const sessionResult = await pool.query(selectQuery, selectValues);
+
+        if (sessionResult.rows.length === 0) {
+            return res.status(404).json({
+                message: "Active session not found or not allowed"
+            });
+        }
+
+        const updated = await pool.query(
             `
             UPDATE sessions
             SET status = 'ended',
                 ended_at = NOW()
             WHERE session_id = $1
+            RETURNING *
             `,
             [session_id]
-        )
-        res.status(200).json({
+        );
+
+        return res.status(200).json({
             message: "Session ended successfully",
-            session: session
-        })
+            session: updated.rows[0]
+        });
+
     } catch (error) {
         console.error("endSession error:", error);
         return res.status(500).json({
             message: error?.message || "Internal server error"
-        })
+        });
     }
-
-}
+};
 
 //getting sessions
 //admins can get all

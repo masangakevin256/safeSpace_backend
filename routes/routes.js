@@ -1,5 +1,6 @@
 import express from "express";
 import { getAllUsers, addNewUser, updateUser, getUser, deleteUser } from "../controller/controlUsers.js";
+import { getUserStats, getCounselorStats, getAdminStats } from "../controller/controlStats.js";
 import { controlUserLogin } from "../controller/controlLogin.js";
 import { servePasswordResetForm, resetPasswordLink, resetPassword } from "../controller/controlPasswordReset.js";
 import { getAllCounselors, addNewCounselor, updateCounselor, getCounselor, deleteCounselor } from "../controller/controlCounselors.js";
@@ -9,7 +10,7 @@ import { controlAdminLogin } from "../controller/controlLogin.js";
 import { verifyJwt } from "../middlewares/verifyJwt.js";
 import { verifyRoles } from "../middlewares/verifyRoles.js";
 import { ROLE_LIST } from "../config/role_list.js";
-import { createSession, getSessions, deleteSession, autoAssignCounselorController } from "../controller/controlSessions.js";
+import { createSession, getSessions, deleteSession, autoAssignCounselorController, activateSession, endSession } from "../controller/controlSessions.js";
 import { getNotifications, deleteNotification } from "../controller/controlNotification.js";
 import { sendMessage, getMessages, deleteMessage } from "../controller/controlMessages.js";
 import { createCheckin, getMyCheckins, getUserCheckins } from "../controller/controlCheckins.js";
@@ -22,7 +23,6 @@ const router = express.Router();
 //unprotected routes
 
 router.post("/users", addNewUser); //adding new user
-router.post("/counselors", addNewCounselor); //adding new counselor
 router.post("/admins", addNewAdmin); //adding new admin
 
 //login routes
@@ -44,11 +44,12 @@ router.use(verifyJwt);
 //control user routes
 router.get("/users", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), getAllUsers);
 router.put("/users/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor, ROLE_LIST.user), updateUser);
-router.get("/users/:id", verifyRoles( ROLE_LIST.user), getUser);
+router.get("/users/:id", verifyRoles(ROLE_LIST.user), getUser);
 router.delete("/users/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.user), deleteUser);
 
 //counselor routes
 router.get("/counselors", verifyRoles(ROLE_LIST.admin), getAllCounselors);
+router.post("/counselors", verifyRoles(ROLE_LIST.admin),addNewCounselor); //adding new counselor
 router.put("/counselors/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), updateCounselor);
 router.get("/counselors/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), getCounselor);
 router.delete("/counselors/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), deleteCounselor);
@@ -62,6 +63,8 @@ router.delete("/admins/:id", verifyRoles(ROLE_LIST.admin), deleteAdmin);
 //session routes
 router.post("/sessions", verifyRoles(ROLE_LIST.user), createSession);
 router.post("/sessions/auto-assign/:session_id", verifyRoles(ROLE_LIST.admin), autoAssignCounselorController);
+router.post("/sessions/:session_id/activate", verifyRoles(ROLE_LIST.counselor, ROLE_LIST.admin), activateSession);
+router.post("/sessions/:session_id/end", verifyRoles(ROLE_LIST.counselor, ROLE_LIST.admin), endSession);
 router.get("/sessions", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor, ROLE_LIST.user), getSessions);
 router.delete("/sessions/:session_id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor, ROLE_LIST.user), deleteSession);
 
@@ -89,5 +92,10 @@ router.post("/feedback", verifyRoles(ROLE_LIST.user), createFeedback);
 router.get("/feedback", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), getAllFeedbacks);
 router.get("/feedback/:id", verifyRoles(ROLE_LIST.admin, ROLE_LIST.counselor), getFeedbackById);
 router.delete("/feedback/:id", verifyRoles(ROLE_LIST.admin), deleteFeedback);
+
+// stats routes
+router.get("/stats/user", verifyRoles(ROLE_LIST.user), getUserStats);
+router.get("/stats/counselor", verifyRoles(ROLE_LIST.counselor), getCounselorStats);
+router.get("/stats/admin", verifyRoles(ROLE_LIST.admin), getAdminStats);
 
 export default router;

@@ -3,10 +3,32 @@ import bcrypt from "bcrypt";
 //no email  for privacy
 export const getAllUsers = async (req, res) => {
   try {
-    // Only select safe fields
-    const result = await pool.query(
-      "SELECT user_id, username, age_group, last_seen, pulse_level FROM users"
-    );
+    const user = req.user;
+
+    let query = `
+      SELECT 
+        u.user_id, 
+        u.username, 
+        u.age_group, 
+        u.last_seen, 
+        u.pulse_level,
+        s.session_id, 
+        s.status, 
+        s.counselor_id
+      FROM users u
+      JOIN sessions s ON s.user_id = u.user_id
+    `;
+
+    let params = [];
+    console.log(user.roles)
+
+    // If NOT admin, restrict to counselor’s own sessions
+    if (user.roles === "counselor") {
+      query += ` WHERE s.counselor_id = $1`;
+      params.push(user.counselor_id);
+    }
+
+    const result = await pool.query(query, params);
 
     res.status(200).json(result.rows);
   } catch (error) {
@@ -17,72 +39,78 @@ export const getAllUsers = async (req, res) => {
 
 
 //add new user
-export const addNewUser = async(req,res) => {
-  
-    const {
-        username,
-        email,
-        password,
-        age_group,
-        phone
+export const addNewUser = async (req, res) => {
 
-    } = req.body;
+  const {
+    username,
+    email,
+    password,
+    age_group,
+    phone
 
-    if(!username || !password){
-        return res.status(400).json({ message: "All fields are required" });
+  } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  try {
+    //check if user exits with the same username
+    const existingUser = await pool.query(
+      "SELECT * FROM users WHERE username = $1",
+      [username]
+    );
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ message: "Try another username" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const normalizedEmail = email?.trim().toLowerCase() || null;
 
-    try {
-        //check if user exits with the same username
-        const existingUser = await pool.query(
-            "SELECT * FROM users WHERE username = $1",
-            [username]
-        );
-        if(existingUser.rows.length > 0){
-            return res.status(400).json({ message: "Try another username" });
-        }
-        
-        const existingEmail = await pool.query(
-            "SELECT * FROM users WHERE email = $1",
-            [email]
-        );
-        if(existingEmail.rows.length > 0){
-            return res.status(400).json({ message: "Try another email" });
-        }
-        await pool.query(
-            "INSERT INTO users (username, email, password_hash, age_group, phone) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-            [username, email, hashedPassword, age_group, phone]
-        );
-        
-        res.json({message: `${username} added successfully.You can now login`});
+    if (normalizedEmail) {
+      const existingEmail = await pool.query(
+        "SELECT * FROM users WHERE email = $1",
+        [normalizedEmail]
+      );
 
-    } catch (error) {
-        console.error(error?.message);
-        res.status(500).json({ message: error?.message });
+      if (existingEmail.rows.length > 0) {
+        return res.status(400).json({ message: "Try another email" });
+      }
     }
-    
+
+    await pool.query(
+      "INSERT INTO users (username, email, password_hash, age_group, phone) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [username, normalizedEmail, hashedPassword, age_group, phone]
+    );
+
+    res.json({ message: `${username} added successfully.You can now login` });
+
+  } catch (error) {
+    console.error(error?.message);
+    res.status(500).json({ message: error?.message });
+  }
+
 
 }
 
 export const updateUser = async (req, res) => {
-  const requestedUser= req.user;
+  const requestedUser = req.user;
   const { id } = req.params;
-  const { username, email, password, age_group, newPassword, pulse_level } = req.body;
+  const { username, email, password, age_group, phone, newPassword, pulse_level } = req.body;
 
   if (!id) {
     return res.status(400).json({ message: "User ID is required" });
   }
 
   try {
-   
+
     //check if the user is the one updating or an admin
-    if(requestedUser.roles === 'user' && requestedUser.user_id !== id){
+    if (requestedUser.roles === 'user' && requestedUser.user_id !== id) {
       //users can only update their own profiles
       return res.status(403).json({ message: "Access denied" });
     }
-     //check if user exits
+    //check if user exits
     const existingUser = await pool.query(
       "SELECT * FROM users WHERE user_id = $1",
       [id]
@@ -123,7 +151,11 @@ export const updateUser = async (req, res) => {
       fields.push(`age_group = $${paramIndex++}`);
       values.push(age_group);
     }
-    if(pulse_level){
+    if (phone) {
+      fields.push(`phone = $${paramIndex++}`);
+      values.push(phone);
+    }
+    if (pulse_level) {
       fields.push(`pulse_level = $${paramIndex++}`);
       values.push(pulse_level);
     }
@@ -164,8 +196,13 @@ export const getUser = async (req, res) => {
       "SELECT * FROM users WHERE user_id = $1",
       [id]
     );
-    if(existingUser.rows.length === 0){
+    if (existingUser.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
+    }
+    //check if the user querying
+    if (user.roles === 'user' && user.user_id !== id) {
+      //users can only get their own accounts
+      return res.status(403).json({ message: "Access denied" });
     }
     const result = await pool.query(
       "SELECT user_id, username, age_group, phone, email FROM users WHERE user_id = $1",
@@ -198,15 +235,15 @@ export const deleteUser = async (req, res) => {
       "SELECT * FROM users WHERE user_id = $1",
       [id]
     );
-    if(existingUser.rows.length === 0){
+    if (existingUser.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
     //check if the user is the one deleting or an admin
-    if(user.roles === 'user' && user.user_id !== id){
+    if (user.roles === 'user' && user.user_id !== id) {
       //users can only delete their own accounts
       return res.status(403).json({ message: "Access denied" });
     }
-   
+
     const result = await pool.query(
       "DELETE FROM users WHERE user_id = $1 RETURNING *",
       [id]
@@ -222,5 +259,9 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: error?.message });
   }
 };
+
+//get user by joining sessions
+
+
 
 
